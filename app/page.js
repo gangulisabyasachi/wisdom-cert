@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import AdminLayout from '@/components/AdminLayout';
 
 export default function Dashboard() {
   const [certificates, setCertificates] = useState([]);
@@ -44,7 +45,6 @@ export default function Dashboard() {
       });
       const data = await res.json();
       if (data.success) {
-        // Optimistic UI update
         setCertificates(prev => prev.filter(c => c.certificate_code !== code));
       } else {
         alert(data.error || 'Failed to delete certificate');
@@ -56,81 +56,87 @@ export default function Dashboard() {
   };
 
   return (
-    <>
+    <AdminLayout>
       <header className="page-header">
-        <h1 className="page-title">Certificate Dashboard</h1>
-        <p className="page-description">Overview and management of all issued certificates.</p>
+        <h1 className="page-title">Dashboard</h1>
+        <p className="page-description">Review and manage official Wisdom Journal and Edited Book certificates.</p>
       </header>
 
       <div className="card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', alignItems: 'center' }}>
-          <form onSubmit={handleSearch} style={{ display: 'flex', gap: '0.5rem', width: '300px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2.5rem', alignItems: 'center' }}>
+          <form onSubmit={handleSearch} style={{ display: 'flex', gap: '0.75rem', width: '380px' }}>
             <input 
               type="text" 
               className="form-input" 
-              placeholder="Search code, name..." 
+              placeholder="Search by name, code or title..." 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-            <button type="submit">Search</button>
+            <button type="submit" className="btn btn-secondary">Search</button>
           </form>
           
           <Link href="/generate">
-            <button>+ Generate New</button>
+            <button className="btn btn-primary">+ New Certificate</button>
           </Link>
         </div>
 
         <div className="table-container">
           {loading ? (
-            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>Loading records...</div>
+            <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-muted)', fontFamily: 'var(--font-serif)', fontStyle: 'italic' }}>
+              Retrieving records...
+            </div>
           ) : (
             <table>
               <thead>
                 <tr>
-                  <th>Code</th>
-                  <th>Recipient Name</th>
+                  <th>Identity</th>
+                  <th>Recipient Details</th>
                   <th>Publication / Title</th>
-                  <th>Identifier</th>
-                  <th>Issue Date</th>
+                  <th>ID Number</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {certificates.length === 0 ? (
                   <tr>
-                    <td colSpan="6" style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No certificates found.</td>
+                    <td colSpan="5" style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-muted)' }}>
+                      No certificates on record.
+                    </td>
                   </tr>
                 ) : (
                   certificates.map(cert => (
                     <tr key={cert._id || cert.certificate_code}>
-                      <td><span className="badge">{cert.certificate_code}</span></td>
                       <td>
-                        <strong>{cert.recipient_name}</strong>
-                        <br/>
-                        <small style={{ color: 'var(--text-muted)' }}>{cert.designation}, {cert.institution}</small>
+                        <span className="badge badge-info">{cert.certificate_code}</span>
                       </td>
                       <td>
-                        <div>{cert.book_title || "Journal Paper"}</div>
-                        <small style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>{cert.chapter_title}</small>
+                        <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)' }}>{cert.recipient_name}</div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{cert.designation}</div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{cert.institution}</div>
                       </td>
                       <td>
-                        {cert.isbn ? `ISBN: ${cert.isbn}` : `ISSN: ${cert.issn}`}
+                        <div style={{ fontWeight: 600 }}>{cert.book_title || "Journal Paper"}</div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic', maxWidth: '250px' }}>{cert.chapter_title}</div>
                       </td>
-                      <td>{cert.issue_date ? new Date(cert.issue_date).toLocaleDateString() : 'N/A'}</td>
                       <td>
-                        <div style={{ display: 'flex', gap: '0.4rem' }}>
-                          <Link href={`/verify?code=${cert.certificate_code}`}>
-                            <button className="secondary" style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}>View</button>
-                          </Link>
-                          <Link href={`/edit/${cert.certificate_code}`}>
-                            <button className="secondary" style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}>Edit</button>
-                          </Link>
-                          <a href={`/api/certificates/${cert.certificate_code}/pdf`} target="_blank">
-                            <button style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}>PDF</button>
+                        <div style={{ fontSize: '0.85rem' }}>
+                          {cert.isbn ? <><span style={{ fontWeight: 700 }}>ISBN:</span> {cert.isbn}</> : <><span style={{ fontWeight: 700 }}>ISSN:</span> {cert.issn}</>}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                          Issued: {cert.issue_date ? new Date(cert.issue_date).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A'}
+                        </div>
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <a href={`/api/certificates/${cert.certificate_code}/pdf`} target="_blank" className="btn btn-primary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem' }}>
+                            PDF
                           </a>
+                          <Link href={`/edit/${cert.certificate_code}`} className="btn btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem' }}>
+                            Edit
+                          </Link>
                           <button 
-                            className="danger" 
-                            style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
+                            className="btn btn-danger" 
+                            style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem' }}
                             onClick={() => handleDelete(cert.certificate_code)}
                           >
                             Delete
@@ -145,6 +151,6 @@ export default function Dashboard() {
           )}
         </div>
       </div>
-    </>
+    </AdminLayout>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import AdminLayout from '@/components/AdminLayout';
 
 export default function Generate() {
   const router = useRouter();
@@ -15,7 +16,7 @@ export default function Generate() {
     type: 'journal', // 'journal' or 'book'
     book_title: '',
     isbn: '',
-    issn: '2395-0218',
+    issn: '3108-0499',
     chapter_title: '',
     issue_date: new Date().toISOString().split('T')[0]
   });
@@ -29,7 +30,6 @@ export default function Generate() {
     setLoading(true);
     setError(null);
 
-    // Clean up dependent fields based on type
     const payload = { ...formData };
     if (payload.type === 'journal') {
       payload.isbn = '';
@@ -47,7 +47,7 @@ export default function Generate() {
       const data = await res.json();
       
       if (data.success) {
-        router.push(`/verify?code=${data.data.certificate_code}`);
+        router.push('/');
       } else {
         setError(data.error || 'Failed to generate certificate');
       }
@@ -59,92 +59,121 @@ export default function Generate() {
   };
 
   return (
-    <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+    <AdminLayout>
       <header className="page-header">
-        <h1 className="page-title">Generate Certificate</h1>
-        <p className="page-description">Create a new publication certificate.</p>
+        <h1 className="page-title">Issue New</h1>
+        <p className="page-description">Create and authenticate a new publication certificate.</p>
       </header>
 
-      <div className="card">
-        {error && <div style={{ color: '#a00000', marginBottom: '1rem', padding: '1rem', background: 'rgba(160,0,0,0.1)', borderRadius: '8px' }}>{error}</div>}
+      <div className="card" style={{ maxWidth: '900px' }}>
+        {error && (
+          <div style={{ backgroundColor: '#fff5f5', color: '#c53030', padding: '1.25rem', borderRadius: 'var(--radius-md)', fontSize: '0.9rem', marginBottom: '2.5rem', border: '1px solid #feb2b2' }}>
+            <strong>Error:</strong> {error}
+          </div>
+        )}
         
         <form onSubmit={handleSubmit}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-            {/* Recipient Information */}
-            <div style={{ gridColumn: '1 / -1' }}>
-              <h3 style={{ marginBottom: '1rem', color: 'var(--primary-color)', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>Recipient Information</h3>
-            </div>
+          {/* Section 1: Recipient */}
+          <div style={{ marginBottom: '3rem' }}>
+            <h3 style={{ 
+              fontSize: '1.25rem', 
+              color: 'var(--wisdom-red)', 
+              marginBottom: '1.5rem', 
+              borderBottom: '1px solid var(--border-subtle)', 
+              paddingBottom: '0.75rem' 
+            }}>
+              Scholarly Recipient
+            </h3>
             
-            <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-              <label className="form-label">Recipient Name</label>
-              <input required type="text" name="recipient_name" className="form-input" value={formData.recipient_name} onChange={handleChange} placeholder="Dr./Prof./Mr./Ms. Name" />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Designation</label>
-              <input required type="text" name="designation" className="form-input" value={formData.designation} onChange={handleChange} placeholder="e.g. Assistant Professor" />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Institution</label>
-              <input required type="text" name="institution" className="form-input" value={formData.institution} onChange={handleChange} placeholder="University/College Name" />
-            </div>
-
-            {/* Publication Details */}
-            <div style={{ gridColumn: '1 / -1', marginTop: '1rem' }}>
-              <h3 style={{ marginBottom: '1rem', color: 'var(--primary-color)', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>Publication Details</h3>
-            </div>
-            
-            <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-              <label className="form-label">Paper / Chapter Title</label>
-              <input required type="text" name="chapter_title" className="form-input" value={formData.chapter_title} onChange={handleChange} placeholder="Title of the contribution" />
-            </div>
-
-            <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-              <label className="form-label">Publication Type</label>
-              <div style={{ display: 'flex', gap: '1.5rem', marginTop: '0.5rem' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                  <input type="radio" name="type" value="journal" checked={formData.type === 'journal'} onChange={handleChange} />
-                  Wisdom Journal
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                  <input type="radio" name="type" value="book" checked={formData.type === 'book'} onChange={handleChange} />
-                  Edited Book
-                </label>
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem' }}>
+              <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                <label className="form-label">Full Name of Recipient</label>
+                <input required type="text" name="recipient_name" className="form-input" value={formData.recipient_name} onChange={handleChange} placeholder="Dr. Sabyasachi Ganguli" />
               </div>
-            </div>
 
-            <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-              <label className="form-label">Book Title</label>
-              <input required type="text" name="book_title" className="form-input" value={formData.book_title} onChange={handleChange} placeholder="Name of the Book or Journal" />
-            </div>
-
-            {formData.type === 'book' ? (
               <div className="form-group">
-                <label className="form-label">ISBN</label>
-                <input required type="text" name="isbn" className="form-input" value={formData.isbn} onChange={handleChange} />
+                <label className="form-label">Academic Designation</label>
+                <input required type="text" name="designation" className="form-input" value={formData.designation} onChange={handleChange} placeholder="e.g. Senior Researcher" />
               </div>
-            ) : (
-              <div className="form-group">
-                <label className="form-label">ISSN (P)</label>
-                <input required type="text" name="issn" className="form-input" value={formData.issn} onChange={handleChange} />
-              </div>
-            )}
 
-            <div className="form-group">
-              <label className="form-label">Issue Date</label>
-              <input required type="date" name="issue_date" className="form-input" value={formData.issue_date} onChange={handleChange} />
+              <div className="form-group">
+                <label className="form-label">Institutional Affiliation</label>
+                <input required type="text" name="institution" className="form-input" value={formData.institution} onChange={handleChange} placeholder="University/Research Center" />
+              </div>
             </div>
           </div>
 
-          <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-            <button type="button" className="secondary" onClick={() => router.back()}>Cancel</button>
-            <button type="submit" disabled={loading}>
-              {loading ? 'Generating...' : 'Generate Certificate'}
+          {/* Section 2: Publication Details */}
+          <div style={{ marginBottom: '3rem' }}>
+            <h3 style={{ 
+              fontSize: '1.25rem', 
+              color: 'var(--wisdom-red)', 
+              marginBottom: '2rem', 
+              borderBottom: '1px solid var(--border-subtle)', 
+              paddingBottom: '0.75rem' 
+            }}>
+              Publication Information
+            </h3>
+            
+            <div className="form-group">
+              <label className="form-label">Paper / Chapter Title</label>
+              <input required type="text" name="chapter_title" className="form-input" value={formData.chapter_title} onChange={handleChange} placeholder="Full title of the contributed work" />
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+              <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                <label className="form-label">Category</label>
+                <div style={{ display: 'flex', gap: '3rem', marginTop: '0.5rem' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', fontWeight: 500 }}>
+                    <input type="radio" name="type" value="journal" checked={formData.type === 'journal'} onChange={handleChange} style={{ accentColor: 'var(--wisdom-red)', width: '18px', height: '18px' }} />
+                    Wisdom Journal
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', fontWeight: 500 }}>
+                    <input type="radio" name="type" value="book" checked={formData.type === 'book'} onChange={handleChange} style={{ accentColor: 'var(--wisdom-red)', width: '18px', height: '18px' }} />
+                    Edited Book
+                  </label>
+                </div>
+              </div>
+
+              <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                <label className="form-label">Official Title of Publication</label>
+                <input required type="text" name="book_title" className="form-input" value={formData.book_title} onChange={handleChange} placeholder="The name of the Journal or Edited Book" />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">{formData.type === 'book' ? 'ISBN Number' : 'ISSN (Print)'}</label>
+                <input 
+                  required 
+                  type="text" 
+                  name={formData.type === 'book' ? 'isbn' : 'issn'} 
+                  className="form-input" 
+                  value={formData.type === 'book' ? formData.isbn : formData.issn} 
+                  onChange={handleChange} 
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Official Issue Date</label>
+                <input required type="date" name="issue_date" className="form-input" value={formData.issue_date} onChange={handleChange} />
+              </div>
+            </div>
+          </div>
+
+          <div style={{ 
+            marginTop: '4rem', 
+            paddingTop: '2rem', 
+            borderTop: '1px solid var(--border-subtle)',
+            display: 'flex', 
+            justifyContent: 'flex-end', 
+            gap: '1.5rem' 
+          }}>
+            <button type="button" className="btn btn-secondary" onClick={() => router.back()}>Cancel</button>
+            <button type="submit" className="btn btn-primary" disabled={loading} style={{ padding: '0.9rem 2.5rem' }}>
+              {loading ? 'Authenticating...' : 'Generate Certificate'}
             </button>
           </div>
         </form>
       </div>
-    </div>
+    </AdminLayout>
   );
 }
