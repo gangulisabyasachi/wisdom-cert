@@ -22,8 +22,8 @@ export async function GET(request) {
         };
     }
 
-    // Sort by issue_date descending
-    const certificates = await Certificate.find(query).sort({ issue_date: -1 }).limit(100);
+    // Sort by _id descending (newest first)
+    const certificates = await Certificate.find(query).sort({ _id: -1 }).limit(100);
     return NextResponse.json({ success: true, data: certificates });
   } catch (error) {
     console.error('Error fetching certificates:', error);
