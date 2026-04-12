@@ -122,6 +122,9 @@ export default function Dashboard() {
                           <Link href={`/verify?code=${cert.certificate_code}`}>
                             <button className="secondary" style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}>View</button>
                           </Link>
+                          <Link href={`/edit/${cert.certificate_code}`}>
+                            <button className="secondary" style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}>Edit</button>
+                          </Link>
                           <a href={`/api/certificates/${cert.certificate_code}/pdf`} target="_blank">
                             <button style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}>PDF</button>
                           </a>

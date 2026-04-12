@@ -1,24 +1,62 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 
-export default function Generate() {
+export default function EditCertificate({ params }) {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const resolvedParams = use(params);
+  const { code } = resolvedParams;
+  
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   
   const [formData, setFormData] = useState({
     recipient_name: '',
     designation: '',
     institution: '',
-    type: 'journal', // 'journal' or 'book'
+    type: 'journal',
     book_title: '',
     isbn: '',
-    issn: '2395-0218',
+    issn: '',
     chapter_title: '',
-    issue_date: new Date().toISOString().split('T')[0]
+    issue_date: ''
   });
+
+  useEffect(() => {
+    const fetchCertificate = async () => {
+      try {
+        const res = await fetch(`/api/certificates/${code}`);
+        const data = await res.json();
+        
+        if (data.success) {
+          const cert = data.data;
+          setFormData({
+            recipient_name: cert.recipient_name,
+            designation: cert.designation,
+            institution: cert.institution,
+            type: cert.isbn ? 'book' : 'journal',
+            book_title: cert.book_title || '',
+            isbn: cert.isbn || '',
+            issn: cert.issn || '',
+            chapter_title: cert.chapter_title,
+            issue_date: new Date(cert.issue_date).toISOString().split('T')[0]
+          });
+        } else {
+          setError('Certificate not found.');
+        }
+      } catch (err) {
+        setError('Failed to load certificate data.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (code) {
+      fetchCertificate();
+    }
+  }, [code]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -26,10 +64,9 @@ export default function Generate() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    setSaving(true);
     setError(null);
 
-    // Clean up dependent fields based on type
     const payload = { ...formData };
     if (payload.type === 'journal') {
       payload.isbn = '';
@@ -39,30 +76,33 @@ export default function Generate() {
     delete payload.type;
 
     try {
-      const res = await fetch('/api/certificates', {
-        method: 'POST',
+      const res = await fetch(`/api/certificates/${code}`, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
       const data = await res.json();
       
       if (data.success) {
-        router.push(`/verify?code=${data.data.certificate_code}`);
+        router.push(`/verify?code=${code}`);
+        router.refresh();
       } else {
-        setError(data.error || 'Failed to generate certificate');
+        setError(data.error || 'Failed to update certificate');
       }
     } catch (err) {
       setError('An error occurred during submission.');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
+
+  if (loading) return <div style={{ padding: '4rem', textAlign: 'center', color: 'var(--text-muted)' }}>Loading certificate data...</div>;
 
   return (
     <div style={{ maxWidth: '800px', margin: '0 auto' }}>
       <header className="page-header">
-        <h1 className="page-title">Generate Certificate</h1>
-        <p className="page-description">Create a new publication certificate.</p>
+        <h1 className="page-title">Edit Certificate</h1>
+        <p className="page-description">Updating details for certificate {code}</p>
       </header>
 
       <div className="card">
@@ -70,7 +110,6 @@ export default function Generate() {
         
         <form onSubmit={handleSubmit}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-            {/* Recipient Information */}
             <div style={{ gridColumn: '1 / -1' }}>
               <h3 style={{ marginBottom: '1rem', color: 'var(--primary-color)', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>Recipient Information</h3>
             </div>
@@ -82,22 +121,21 @@ export default function Generate() {
 
             <div className="form-group">
               <label className="form-label">Designation</label>
-              <input required type="text" name="designation" className="form-input" value={formData.designation} onChange={handleChange} placeholder="e.g. Assistant Professor" />
+              <input required type="text" name="designation" className="form-input" value={formData.designation} onChange={handleChange} />
             </div>
 
             <div className="form-group">
               <label className="form-label">Institution</label>
-              <input required type="text" name="institution" className="form-input" value={formData.institution} onChange={handleChange} placeholder="University/College Name" />
+              <input required type="text" name="institution" className="form-input" value={formData.institution} onChange={handleChange} />
             </div>
 
-            {/* Publication Details */}
             <div style={{ gridColumn: '1 / -1', marginTop: '1rem' }}>
               <h3 style={{ marginBottom: '1rem', color: 'var(--primary-color)', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>Publication Details</h3>
             </div>
             
             <div className="form-group" style={{ gridColumn: '1 / -1' }}>
               <label className="form-label">Paper / Chapter Title</label>
-              <input required type="text" name="chapter_title" className="form-input" value={formData.chapter_title} onChange={handleChange} placeholder="Title of the contribution" />
+              <input required type="text" name="chapter_title" className="form-input" value={formData.chapter_title} onChange={handleChange} />
             </div>
 
             <div className="form-group" style={{ gridColumn: '1 / -1' }}>
@@ -139,8 +177,8 @@ export default function Generate() {
 
           <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
             <button type="button" className="secondary" onClick={() => router.back()}>Cancel</button>
-            <button type="submit" disabled={loading}>
-              {loading ? 'Generating...' : 'Generate Certificate'}
+            <button type="submit" disabled={saving}>
+              {saving ? 'Saving Changes...' : 'Save Changes'}
             </button>
           </div>
         </form>
