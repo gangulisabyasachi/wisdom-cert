@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import fontkit from '@pdf-lib/fontkit';
 import QRCode from 'qrcode';
 import fs from 'fs';
 import path from 'path';
@@ -36,11 +37,58 @@ export async function GET(request, { params }) {
     const page = pdfDoc.addPage([A4_W, A4_H]);
 
     // Fonts
+    try {
+      pdfDoc.registerFontkit(fontkit);
+    } catch (e) {
+      console.error('Fontkit registration failed:', e);
+    }
+
+    let greatVibes, jacquard24, ryeFont;
+    let pfReg, pfBold, pfItalic, pfBoldItalic;
+    
+    try {
+      const fontsDir = path.join(process.cwd(), 'lib', 'fonts');
+      
+      const gvPath = path.join(fontsDir, 'GreatVibes-Regular.ttf');
+      if (fs.existsSync(gvPath)) greatVibes = await pdfDoc.embedFont(fs.readFileSync(gvPath));
+
+      const jqPath = path.join(fontsDir, 'Jacquard24-Regular.ttf');
+      if (fs.existsSync(jqPath)) jacquard24 = await pdfDoc.embedFont(fs.readFileSync(jqPath));
+
+      const ryePath = path.join(fontsDir, 'Rye-Regular.ttf');
+      if (fs.existsSync(ryePath)) ryeFont = await pdfDoc.embedFont(fs.readFileSync(ryePath));
+
+      // Load Playfair Display family
+      const pfRegPath = path.join(fontsDir, 'PlayfairDisplay-Regular.ttf');
+      if (fs.existsSync(pfRegPath)) pfReg = await pdfDoc.embedFont(fs.readFileSync(pfRegPath));
+
+      const pfBoldPath = path.join(fontsDir, 'PlayfairDisplay-Bold.ttf');
+      if (fs.existsSync(pfBoldPath)) pfBold = await pdfDoc.embedFont(fs.readFileSync(pfBoldPath));
+
+      const pfItalicPath = path.join(fontsDir, 'PlayfairDisplay-Italic.ttf');
+      if (fs.existsSync(pfItalicPath)) pfItalic = await pdfDoc.embedFont(fs.readFileSync(pfItalicPath));
+
+      const pfBIPath = path.join(fontsDir, 'PlayfairDisplay-BoldItalic.ttf');
+      if (fs.existsSync(pfBIPath)) pfBoldItalic = await pdfDoc.embedFont(fs.readFileSync(pfBIPath));
+
+    } catch (e) {
+      console.error('Failed to embed custom fonts:', e);
+    }
+
+    // Embed Standard Fonts as fallbacks
     const timesRoman = await pdfDoc.embedFont(StandardFonts.TimesRoman);
     const timesBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
     const timesItalic = await pdfDoc.embedFont(StandardFonts.TimesRomanItalic);
     const timesBoldItalic = await pdfDoc.embedFont(StandardFonts.TimesRomanBoldItalic);
     const courierBold = await pdfDoc.embedFont(StandardFonts.CourierBold);
+
+    const fReg = pfReg || timesRoman;
+    const fBold = pfBold || timesBold;
+    const fItalic = pfItalic || timesItalic;
+    const fBoldItalic = pfBoldItalic || timesBoldItalic;
+
+    const recipientFont = greatVibes || fItalic;
+    const titleFont = jacquard24 || fBold;
 
     // Colors
     const colBlack = rgb(0, 0, 0);
@@ -79,8 +127,8 @@ export async function GET(request, { params }) {
     };
 
     // Header
-    drawCenteredTextScaled('W I S D O M   J O U R N A L', timesBold, 30, 20, 260, colTitleRed);
-    drawCenteredTextScaled('(Worldwide Interdisciplinary Scholarship, Discoveries, and Original Manuscripts)', timesItalic, 15, 33, 260, colBlack);
+    drawCenteredTextScaled('W I S D O M   J O U R N A L', ryeFont || fBold, 32, 20, 260, colTitleRed);
+    drawCenteredTextScaled('(Worldwide Interdisciplinary Scholarship, Discoveries, and Original Manuscripts)', fItalic, 15, 33, 260, colBlack);
 
     const publicDir = path.join(process.cwd(), 'public');
 
@@ -99,16 +147,16 @@ export async function GET(request, { params }) {
     // Date
     const issueDate = new Date(certificate.issue_date);
     const dateStr = `Date: ${issueDate.getDate().toString().padStart(2, '0')}/${(issueDate.getMonth() + 1).toString().padStart(2, '0')}/${issueDate.getFullYear()}`;
-    page.drawText(dateStr, { x: cX(30), y: cY(45) - 15 * 0.8, size: 15, font: timesBold, color: colBlack });
+    page.drawText(dateStr, { x: cX(30), y: cY(45) - 15 * 0.8, size: 15, font: fBold, color: colBlack });
 
     // Presents
-    drawCenteredTextScaled('p r e s e n t s', timesItalic, 19, 58, 200, colBlack);
-    drawCenteredTextScaled('CERTIFICATE OF PUBLICATION', timesBold, 24, 70, 260, colTitleRed);
+    drawCenteredTextScaled('p r e s e n t s', fItalic, 19, 58, 200, colBlack);
+    drawCenteredTextScaled('Certificate of Publication', titleFont, 42, 73, 260, colTitleRed);
 
     // Awarded To
-    drawCenteredTextScaled('This certificate is awarded to Dr./Prof./Mr./Ms.', timesRoman, 14, 90, 260);
-    drawCenteredTextScaled(certificate.recipient_name, timesItalic, 20, 102, 260, colBorderRed); // Using border red [128, 0, 0] as in PHP
-    drawCenteredTextScaled(`${certificate.designation}, ${certificate.institution}`, timesRoman, 14, 110, 260);
+    drawCenteredTextScaled('This certificate is awarded to Dr./Prof./Mr./Ms.', fReg, 14, 90, 260);
+    drawCenteredTextScaled(certificate.recipient_name, recipientFont, 32, 101, 260, colBorderRed); 
+    drawCenteredTextScaled(`${certificate.designation}, ${certificate.institution}`, fReg, 14, 113, 260);
 
     // Line separator
     page.drawLine({
@@ -122,10 +170,10 @@ export async function GET(request, { params }) {
     const maxWidth = cX(240);
 
     // We break into segments to allow different font styles per part
-    const segment1 = { text: `For her/his exceptional contribution to ${contribution_to} `, font: timesRoman };
-    const segment2 = { text: `"${certificate.book_title} (${identifier_label}: ${identifier_value})"`, font: timesBold };
-    const segment3 = { text: ` having her/his ${paper} titled `, font: timesRoman };
-    const segment4 = { text: `"${certificate.chapter_title}".`, font: timesBoldItalic };
+    const segment1 = { text: `For her/his exceptional contribution to ${contribution_to} `, font: fReg };
+    const segment2 = { text: `"${certificate.book_title} (${identifier_label}: ${identifier_value})"`, font: fBold };
+    const segment3 = { text: ` having her/his ${paper} titled `, font: fReg };
+    const segment4 = { text: `"${certificate.chapter_title}".`, font: fBoldItalic };
 
     // New: Dynamic Mixed-Style Paragraph Wrapper
     const drawMixedCenteredParagraph = (segments, startY_mm, maxWidth_mm, fontSize, lineSpacing_mm = 7) => {
@@ -139,11 +187,9 @@ export async function GET(request, { params }) {
       segments.forEach(segment => {
         const words = segment.text.split(' ');
         words.forEach((word, index) => {
-          // Add back spaces except for the very last word of a segment if needed?
-          // Actually, just add a space string after every word except the last one in the whole list.
-          styledWords.push({ 
-            text: word + (index === words.length - 1 ? '' : ' '), 
-            font: segment.font 
+          styledWords.push({
+            text: word + (index === words.length - 1 ? '' : ' '),
+            font: segment.font
           });
         });
       });
@@ -167,7 +213,7 @@ export async function GET(request, { params }) {
       lines.forEach(line => {
         let lineW = 0;
         line.forEach(sw => lineW += sw.font.widthOfTextAtSize(sw.text, fontSize));
-        
+
         let startX = (A4_W - lineW) / 2;
         line.forEach(sw => {
           page.drawText(sw.text, {
@@ -185,10 +231,10 @@ export async function GET(request, { params }) {
 
     // Define segments for the paragraph
     const bodySegments = [
-      { text: `For her/his exceptional contribution to ${contribution_to} `, font: timesRoman },
-      { text: `"${certificate.book_title} (${identifier_label}: ${identifier_value})"`, font: timesBold },
-      { text: ` having her/his ${paper} titled `, font: timesRoman },
-      { text: `"${certificate.chapter_title}".`, font: timesBoldItalic }
+      { text: `For her/his exceptional contribution to ${contribution_to} `, font: fReg },
+      { text: `"${certificate.book_title} (${identifier_label}: ${identifier_value})"`, font: fBold },
+      { text: ` having her/his ${paper} titled `, font: fReg },
+      { text: `"${certificate.chapter_title}".`, font: fBoldItalic }
     ];
 
     // Draw as a natural paragraph starting at 128mm from top
@@ -201,17 +247,18 @@ export async function GET(request, { params }) {
       const sig1W = cX(40);
       const sig1H = (sig1W * sig1.height) / sig1.width;
       // sigY-12 to move it high above the line as requested
-      page.drawImage(sig1, { x: cX(40), y: cY(sigY - 12) - sig1H, width: sig1W, height: sig1H });
+      page.drawImage(sig1, { x: cX(45), y: cY(sigY - 12) - sig1H, width: sig1W, height: sig1H });
     } catch (e) { }
 
-    page.drawLine({ start: { x: cX(40), y: cY(sigY) }, end: { x: cX(90), y: cY(sigY) }, thickness: 0.5 });
-    page.drawText('For Jayasree Publications', { x: cX(40) + (cX(50) - timesRoman.widthOfTextAtSize('For Jayasree Publications', 10)) / 2, y: cY(sigY + 5), size: 10, font: timesRoman });
+    page.drawLine({ start: { x: cX(45), y: cY(sigY) }, end: { x: cX(95), y: cY(sigY) }, thickness: 0.5 });
+    page.drawText('For Jayasree Publications', { x: cX(45) + (cX(50) - fReg.widthOfTextAtSize('For Jayasree Publications', 10)) / 2, y: cY(sigY + 5), size: 10, font: fReg });
 
     try {
       const seal = await pdfDoc.embedPng(fs.readFileSync(path.join(publicDir, 'publisher_seal.png')));
       const sealW = cX(30);
       const sealH = (sealW * seal.height) / seal.width;
-      page.drawImage(seal, { x: cX(130), y: cY(sigY - 12) - sealH, width: sealW, height: sealH });
+      // Centering seal: Page is 297mm wide. Seal center at 148.5. Seal width is 30. Start X = 148.5 - 15 = 133.5
+      page.drawImage(seal, { x: cX(133.5), y: cY(sigY - 12) - sealH, width: sealW, height: sealH });
     } catch (e) { }
 
     try {
@@ -219,20 +266,20 @@ export async function GET(request, { params }) {
       const sig2W = cX(18);
       const sig2H = (sig2W * sig2.height) / sig2.width;
       // sigY-15 to move it high above the line as requested
-      page.drawImage(sig2, { x: cX(211), y: cY(sigY - 15) - sig2H, width: sig2W, height: sig2H });
+      page.drawImage(sig2, { x: cX(218), y: cY(sigY - 15) - sig2H, width: sig2W, height: sig2H });
     } catch (e) { }
 
-    page.drawLine({ start: { x: cX(195), y: cY(sigY) }, end: { x: cX(245), y: cY(sigY) }, thickness: 0.5 });
-    page.drawText('Prithwish Ganguli', { x: cX(195) + (cX(50) - timesRoman.widthOfTextAtSize('Prithwish Ganguli', 12)) / 2, y: cY(sigY + 5), size: 12, font: timesRoman });
-    page.drawText('Editor', { x: cX(195) + (cX(50) - timesRoman.widthOfTextAtSize('Editor', 10)) / 2, y: cY(sigY + 10), size: 10, font: timesRoman });
+    page.drawLine({ start: { x: cX(202), y: cY(sigY) }, end: { x: cX(252), y: cY(sigY) }, thickness: 0.5 });
+    page.drawText('Prithwish Ganguli', { x: cX(202) + (cX(50) - fReg.widthOfTextAtSize('Prithwish Ganguli', 12)) / 2, y: cY(sigY + 5), size: 12, font: fReg });
+    page.drawText('Editor', { x: cX(202) + (cX(50) - fReg.widthOfTextAtSize('Editor', 10)) / 2, y: cY(sigY + 10), size: 10, font: fReg });
 
     // Footer
-    drawCenteredTextScaled('175, Canning Road, S 6, Kolkata 700 144', timesRoman, 10, 185, 260, colGray);
-    drawCenteredTextScaled('www.wisdomj.in, editorial@wisdomj.in', timesRoman, 10, 190, 260, colGray);
-    drawCenteredTextScaled('To verify the certificate, please visit https://certificates.wisdomj.in/verify and enter your certificate number', timesRoman, 9, 195, 260, colGray);
+    drawCenteredTextScaled('175, Canning Road, S 6, Kolkata 700 144', fReg, 10, 185, 260, colGray);
+    drawCenteredTextScaled('www.wisdomj.in, editorial@wisdomj.in', fReg, 10, 190, 260, colGray);
+    drawCenteredTextScaled('To verify the certificate, please visit https://certificates.wisdomj.in/verify and enter your certificate number', fReg, 9, 195, 260, colGray);
 
     // QR & Code
-    page.drawText('For Certificate No.', { x: cX(18), y: cY(168), size: 9, font: timesRoman });
+    page.drawText('For Certificate No.', { x: cX(18), y: cY(168), size: 9, font: fReg });
     page.drawText(certificate.certificate_code, { x: cX(18), y: cY(172), size: 9, font: courierBold });
 
     const verifyUrl = `https://certificates.wisdomj.in/verify?code=${certificate.certificate_code}`;
