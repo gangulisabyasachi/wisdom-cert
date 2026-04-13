@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const MONGODB_URI = "mongodb+srv://gangulisabyasachi2705_db_user:B4cXXWlPhzoBy6iX@wisdomcluster.uadzxij.mongodb.net/wisdomDB?appName=wisdomCluster";
+const MONGODB_URI = process.env.MONGODB_URI;
 
 async function run() {
   try {
