@@ -43,33 +43,41 @@ export async function GET(request, { params }) {
       console.error('Fontkit registration failed:', e);
     }
 
-    let greatVibes, jacquard24, ryeFont;
+    let greatVibes, jacquard24, ryeFont, pinyonScript;
     let pfReg, pfBold, pfItalic, pfBoldItalic;
+    let baskReg, baskItalic, baskMedium, baskBold, baskBoldItalic;
     
     try {
       const fontsDir = path.join(process.cwd(), 'lib', 'fonts');
       
-      const gvPath = path.join(fontsDir, 'GreatVibes-Regular.ttf');
-      if (fs.existsSync(gvPath)) greatVibes = await pdfDoc.embedFont(fs.readFileSync(gvPath));
+      // Helper to safely embed fonts
+      const safeEmbed = async (fileName) => {
+        const filePath = path.join(fontsDir, fileName);
+        if (fs.existsSync(filePath)) {
+          try {
+            return await pdfDoc.embedFont(fs.readFileSync(filePath));
+          } catch (e) {
+            console.error(`Failed to embed ${fileName}:`, e);
+          }
+        }
+        return null;
+      };
 
-      const jqPath = path.join(fontsDir, 'Jacquard24-Regular.ttf');
-      if (fs.existsSync(jqPath)) jacquard24 = await pdfDoc.embedFont(fs.readFileSync(jqPath));
+      greatVibes = await safeEmbed('GreatVibes-Regular.ttf');
+      jacquard24 = await safeEmbed('Jacquard24-Regular.ttf');
+      ryeFont = await safeEmbed('Rye-Regular.ttf');
+      pinyonScript = await safeEmbed('PinyonScript-Regular.ttf');
 
-      const ryePath = path.join(fontsDir, 'Rye-Regular.ttf');
-      if (fs.existsSync(ryePath)) ryeFont = await pdfDoc.embedFont(fs.readFileSync(ryePath));
+      pfReg = await safeEmbed('PlayfairDisplay-Regular.ttf');
+      pfBold = await safeEmbed('PlayfairDisplay-Bold.ttf');
+      pfItalic = await safeEmbed('PlayfairDisplay-Italic.ttf');
+      pfBoldItalic = await safeEmbed('PlayfairDisplay-BoldItalic.ttf');
 
-      // Load Playfair Display family
-      const pfRegPath = path.join(fontsDir, 'PlayfairDisplay-Regular.ttf');
-      if (fs.existsSync(pfRegPath)) pfReg = await pdfDoc.embedFont(fs.readFileSync(pfRegPath));
-
-      const pfBoldPath = path.join(fontsDir, 'PlayfairDisplay-Bold.ttf');
-      if (fs.existsSync(pfBoldPath)) pfBold = await pdfDoc.embedFont(fs.readFileSync(pfBoldPath));
-
-      const pfItalicPath = path.join(fontsDir, 'PlayfairDisplay-Italic.ttf');
-      if (fs.existsSync(pfItalicPath)) pfItalic = await pdfDoc.embedFont(fs.readFileSync(pfItalicPath));
-
-      const pfBIPath = path.join(fontsDir, 'PlayfairDisplay-BoldItalic.ttf');
-      if (fs.existsSync(pfBIPath)) pfBoldItalic = await pdfDoc.embedFont(fs.readFileSync(pfBIPath));
+      baskReg = await safeEmbed('Baskervville-Regular.ttf');
+      baskItalic = await safeEmbed('Baskervville-Italic.ttf');
+      baskMedium = await safeEmbed('Baskervville-Medium.ttf');
+      baskBold = await safeEmbed('Baskervville-Bold.ttf');
+      baskBoldItalic = await safeEmbed('Baskervville-BoldItalic.ttf');
 
     } catch (e) {
       console.error('Failed to embed custom fonts:', e);
@@ -82,12 +90,13 @@ export async function GET(request, { params }) {
     const timesBoldItalic = await pdfDoc.embedFont(StandardFonts.TimesRomanBoldItalic);
     const courierBold = await pdfDoc.embedFont(StandardFonts.CourierBold);
 
-    const fReg = pfReg || timesRoman;
-    const fBold = pfBold || timesBold;
-    const fItalic = pfItalic || timesItalic;
-    const fBoldItalic = pfBoldItalic || timesBoldItalic;
+    const fReg = baskReg || pfReg || timesRoman;
+    const fBold = baskBold || pfBold || timesBold;
+    const fMedium = baskMedium || fBold;
+    const fItalic = baskItalic || pfItalic || timesItalic;
+    const fBoldItalic = baskBoldItalic || pfBoldItalic || timesBoldItalic;
 
-    const recipientFont = greatVibes || fItalic;
+    const recipientFont = pinyonScript || greatVibes || fItalic;
     const titleFont = jacquard24 || fBold;
 
     // Colors
@@ -128,7 +137,7 @@ export async function GET(request, { params }) {
 
     // Header
     drawCenteredTextScaled('W I S D O M   J O U R N A L', ryeFont || fBold, 32, 20, 260, colTitleRed);
-    drawCenteredTextScaled('(Worldwide Interdisciplinary Scholarship, Discoveries, and Original Manuscripts)', fItalic, 15, 33, 260, colBlack);
+    drawCenteredTextScaled('(Worldwide Interdisciplinary Scholarship, Discoveries, and Original Manuscripts)', fReg, 15, 33, 260, colBlack);
 
     const publicDir = path.join(process.cwd(), 'public');
 
@@ -144,24 +153,19 @@ export async function GET(request, { params }) {
       }
     } catch (e) { }
 
-    // Date
-    const issueDate = new Date(certificate.issue_date);
-    const dateStr = `Date: ${issueDate.getDate().toString().padStart(2, '0')}/${(issueDate.getMonth() + 1).toString().padStart(2, '0')}/${issueDate.getFullYear()}`;
-    page.drawText(dateStr, { x: cX(30), y: cY(45) - 15 * 0.8, size: 15, font: fBold, color: colBlack });
-
     // Presents
-    drawCenteredTextScaled('p r e s e n t s', fItalic, 19, 58, 200, colBlack);
-    drawCenteredTextScaled('Certificate of Publication', titleFont, 42, 73, 260, colTitleRed);
+    drawCenteredTextScaled('p r e s e n t s', fItalic, 19, 45, 200, colBlack);
+    drawCenteredTextScaled('Certificate of Publication', titleFont, 42, 60, 260, colTitleRed);
 
     // Awarded To
-    drawCenteredTextScaled('This certificate is awarded to Dr./Prof./Mr./Ms.', fReg, 14, 90, 260);
-    drawCenteredTextScaled(certificate.recipient_name, recipientFont, 32, 101, 260, colBorderRed); 
-    drawCenteredTextScaled(`${certificate.designation}, ${certificate.institution}`, fReg, 14, 113, 260);
+    drawCenteredTextScaled('This certificate is awarded to Dr./Prof./Mr./Ms.', fReg, 14, 77, 260);
+    drawCenteredTextScaled(certificate.recipient_name, recipientFont, 32, 88, 260, colBorderRed); 
+    drawCenteredTextScaled(`${certificate.designation}, ${certificate.institution}`, fReg, 14, 100, 260);
 
     // Line separator
     page.drawLine({
-      start: { x: cX(25), y: cY(122) },
-      end: { x: A4_W - cX(17), y: cY(122) },
+      start: { x: cX(25), y: cY(109) },
+      end: { x: A4_W - cX(17), y: cY(109) },
       thickness: 1.5,
       color: colBlack
     });
@@ -189,7 +193,8 @@ export async function GET(request, { params }) {
         words.forEach((word, index) => {
           styledWords.push({
             text: word + (index === words.length - 1 ? '' : ' '),
-            font: segment.font
+            font: segment.font,
+            isBold: !!segment.isBold
           });
         });
       });
@@ -237,11 +242,11 @@ export async function GET(request, { params }) {
       { text: `"${certificate.chapter_title}".`, font: fBoldItalic }
     ];
 
-    // Draw as a natural paragraph starting at 128mm from top
-    drawMixedCenteredParagraph(bodySegments, 128, 240, 12);
+    // Draw as a natural paragraph starting at 115mm from top
+    drawMixedCenteredParagraph(bodySegments, 115, 240, 12);
 
     // Signatures
-    const sigY = 165;
+    const sigY = 152;
     try {
       const sig1 = await pdfDoc.embedPng(fs.readFileSync(path.join(publicDir, 'signature1.png')));
       const sig1W = cX(40);
@@ -273,13 +278,31 @@ export async function GET(request, { params }) {
     page.drawText('Prithwish Ganguli', { x: cX(202) + (cX(50) - fReg.widthOfTextAtSize('Prithwish Ganguli', 12)) / 2, y: cY(sigY + 5), size: 12, font: fReg });
     page.drawText('Editor', { x: cX(202) + (cX(50) - fReg.widthOfTextAtSize('Editor', 10)) / 2, y: cY(sigY + 10), size: 10, font: fReg });
 
+    // Date (Formal Scholarly Format - Relocated to Footer Area)
+    const issueDate = new Date(certificate.issue_date);
+    const day = issueDate.getDate();
+    const month = issueDate.toLocaleString('default', { month: 'long' });
+    const year = issueDate.getFullYear();
+
+    const getOrdinal = (d) => {
+      if (d > 3 && d < 21) return 'th';
+      switch (d % 10) {
+        case 1: return "st";
+        case 2: return "nd";
+        case 3: return "rd";
+        default: return "th";
+      }
+    };
+    const dateStr = `Dated the ${day}${getOrdinal(day)} Day of ${month}, ${year}`;
+    drawCenteredTextScaled(dateStr, fMedium, 12, 178, 260, colBlack);
+
     // Footer
-    drawCenteredTextScaled('175, Canning Road, S 6, Kolkata 700 144', fReg, 10, 185, 260, colGray);
-    drawCenteredTextScaled('www.wisdomj.in, editorial@wisdomj.in', fReg, 10, 190, 260, colGray);
-    drawCenteredTextScaled('To verify the certificate, please visit https://certificates.wisdomj.in/verify and enter your certificate number', fReg, 9, 195, 260, colGray);
+    drawCenteredTextScaled('175, Canning Road, S 6, Kolkata 700 144', fMedium, 10, 185, 260, colGray);
+    drawCenteredTextScaled('www.wisdomj.in, editorial@wisdomj.in', fMedium, 10, 190, 260, colGray);
+    drawCenteredTextScaled('To verify the certificate, please visit https://certificates.wisdomj.in/verify and enter your certificate number', fMedium, 9, 195, 260, colGray);
 
     // QR & Code
-    page.drawText('Certificate No.', { x: cX(18), y: cY(168), size: 9, font: fReg });
+    page.drawText('Certificate No.', { x: cX(18), y: cY(168), size: 9, font: fMedium });
     page.drawText(certificate.certificate_code, { x: cX(18), y: cY(172), size: 9, font: courierBold });
 
     const verifyUrl = `https://certificates.wisdomj.in/verify?code=${certificate.certificate_code}`;
