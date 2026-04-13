@@ -279,7 +279,7 @@ export async function GET(request, { params }) {
     drawCenteredTextScaled('To verify the certificate, please visit https://certificates.wisdomj.in/verify and enter your certificate number', fReg, 9, 195, 260, colGray);
 
     // QR & Code
-    page.drawText('For Certificate No.', { x: cX(18), y: cY(168), size: 9, font: fReg });
+    page.drawText('Certificate No.', { x: cX(18), y: cY(168), size: 9, font: fReg });
     page.drawText(certificate.certificate_code, { x: cX(18), y: cY(172), size: 9, font: courierBold });
 
     const verifyUrl = `https://certificates.wisdomj.in/verify?code=${certificate.certificate_code}`;
