@@ -35,6 +35,9 @@ export default function AdminLayout({ children }) {
           <Link href="/verify" className={`nav-item ${pathname.startsWith('/verify') ? 'active' : ''}`}>
             Public Verifier
           </Link>
+          <a href="https://wisdominstitution.org/admin" target="_blank" rel="noopener noreferrer" className="nav-item" style={{ marginTop: '1rem', borderTop: '1px solid var(--border-on-dark)', paddingTop: '1.5rem' }}>
+            Main Admin Portal ↗
+          </a>
         </nav>
 
         <div className="sidebar-footer">
