@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import AdminLayout from '@/components/AdminLayout';
 
 export default function Dashboard() {
   const [certificates, setCertificates] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const timeoutRef = useRef(null);
 
   useEffect(() => {
     fetchCertificates();
@@ -29,9 +30,19 @@ export default function Dashboard() {
     }
   };
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    fetchCertificates(search);
+  const handleSearchChange = (term) => {
+    setSearchTerm(term);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    
+    timeoutRef.current = setTimeout(() => {
+      fetchCertificates(term);
+    }, 300); // 300ms debounce
+  };
+
+  const handleClear = () => {
+    setSearchTerm('');
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    fetchCertificates('');
   };
 
   const handleDelete = async (code) => {
@@ -63,18 +74,20 @@ export default function Dashboard() {
       </header>
 
       <div className="card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2.5rem', alignItems: 'center' }}>
-          <form onSubmit={handleSearch} style={{ display: 'flex', gap: '0.75rem', width: '380px' }}>
-            <input 
-              type="text" 
-              className="form-input" 
-              placeholder="Search by name, code or title..." 
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+        <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', alignItems: 'center' }}>
+          <div style={{ position: 'relative', flex: 1, maxWidth: '400px' }}>
+            <input
+              type="text"
+              className="form-input"
+              placeholder="Type to auto-search certificates..."
+              value={searchTerm}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              style={{ width: '100%', paddingRight: '15px' }}
             />
-            <button type="submit" className="btn btn-secondary">Search</button>
-          </form>
-          
+          </div>
+          {searchTerm && (
+            <button type="button" className="btn btn-secondary" onClick={handleClear}>Clear Search</button>
+          )}
           <Link href="/generate">
             <button className="btn btn-primary">+ New Certificate</button>
           </Link>
